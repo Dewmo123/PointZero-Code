@@ -171,6 +171,7 @@ namespace Server.Rooms
             roundEnd.winner = (ushort)winTeam;
             roundEnd.redCount = teamInfos[Team.Red].WinCount;
             roundEnd.blueCount = teamInfos[Team.Blue].WinCount;
+            roundEnd.isEnd = isEnd;
             Broadcast(roundEnd);
         }
 

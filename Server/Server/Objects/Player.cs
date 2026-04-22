@@ -6,7 +6,7 @@ using System.Numerics;
 
 namespace Server.Objects
 {
-    internal class Player : ObjectBase,IHittable
+    internal class Player : ObjectBase, IHittable
     {
         public bool isAiming;
         public Team team;
@@ -14,9 +14,11 @@ namespace Server.Objects
         public int animHash;
         public int speed;
         public string nickName;
+        public long LastLocationTimestamp { get; private set; }
 
         public Player(Room room) : base(room)
         {
+            TouchLocationTimestamp();
         }
 
         public int Health { get; set; }
@@ -26,13 +28,23 @@ namespace Server.Objects
         {
             Health = 100;
         }
+
         public void HandlePacket(C_UpdateLocation packet)
+            => SetLocation(
+                packet.location.position.ToVector3(),
+                packet.location.rotation.ToQuaternion(),
+                packet.location.gunRotation.ToQuaternion(),
+                packet.location.animHash,
+                packet.isAiming);
+
+        public void SetLocation(Vector3 newPosition, Quaternion newRotation, Quaternion newGunRotation, int newAnimHash, bool aiming)
         {
-            isAiming = packet.isAiming;
-            position = packet.location.position.ToVector3();
-            rotation = packet.location.rotation.ToQuaternion();
-            gunRotation = packet.location.gunRotation.ToQuaternion();
-            animHash = packet.location.animHash;
+            isAiming = aiming;
+            position = newPosition;
+            rotation = newRotation;
+            gunRotation = newGunRotation;
+            animHash = newAnimHash;
+            TouchLocationTimestamp();
         }
 
         public override IDataPacket CreatePacket()
@@ -48,7 +60,9 @@ namespace Server.Objects
             Health = Math.Clamp(Health - 10, 0, 100);
             if (IsDead)
                 _myRoom.ObjectDead(this);
-                
         }
+
+        private void TouchLocationTimestamp()
+            => LastLocationTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     }
 }

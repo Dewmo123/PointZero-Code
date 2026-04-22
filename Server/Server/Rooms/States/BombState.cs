@@ -6,6 +6,7 @@ namespace Server.Rooms.States
     internal class BombState : GamingState
     {
         private CountTime _bombCount;
+        private S_SyncTimer _syncTimer = new();
         public BombState(GameRoom room) : base(room)
         {
             _bombCount = new(HandleElapsed, HandleBomb, 100);
@@ -38,7 +39,8 @@ namespace Server.Rooms.States
 
         private void HandleElapsed(double obj)
         {
-            Console.WriteLine(_room.bombTime - obj);
+            _syncTimer.time = Math.Max(0, _room.bombTime - (float)obj);
+            _room.Broadcast(_syncTimer);
         }
 
         private void HandleBomb()

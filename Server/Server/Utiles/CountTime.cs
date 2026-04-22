@@ -9,6 +9,7 @@ namespace Server.Utiles
         private int _timeInterval;
         private Action<double> _elapsed;
         private Action _callback;
+        private float _nextElapsedTime;
         public bool IsRunning { get; private set; }
         public CountTime(Action<double> elapsed, Action callback, int endTime, int interval)
         {
@@ -31,23 +32,36 @@ namespace Server.Utiles
         }
         public void StartCount()
         {
+            _currentTime = 0;
+            _nextElapsedTime = 0;
             IsRunning = true;
         }
         public void UpdateDeltaTime()
         {
-            if (IsRunning)
+            if (!IsRunning)
+                return;
+
+            _currentTime += Time.deltaTime;
+            float intervalSeconds = _timeInterval <= 0 ? 0 : _timeInterval / 1000f;
+            if (intervalSeconds <= 0)
             {
-                _currentTime += Time.deltaTime;
-                if (_timeInterval % _currentTime <= 30)
-                    HandleTimerElapsed();
+                HandleTimerElapsed();
+                return;
+            }
+
+            while (IsRunning && _currentTime >= _nextElapsedTime)
+            {
+                HandleTimerElapsed();
+                _nextElapsedTime += intervalSeconds;
             }
         }
         private void HandleTimerElapsed()
         {
-            _elapsed?.Invoke(_currentTime);
-            if (_currentTime > _endTime)
+            _elapsed?.Invoke(Math.Min(_currentTime, _endTime));
+            if (_currentTime >= _endTime)
             {
                 _currentTime = 0;
+                _nextElapsedTime = 0;
                 IsRunning = false;
                 _callback?.Invoke();
             }
@@ -57,6 +71,7 @@ namespace Server.Utiles
             Console.WriteLine("Count Dispose");
             IsRunning = false;
             _currentTime = 0;
+            _nextElapsedTime = 0;
             if (invokeCallback)
                 _callback?.Invoke();
         }
