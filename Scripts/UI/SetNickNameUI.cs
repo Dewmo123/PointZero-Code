@@ -11,15 +11,24 @@ namespace Scripts.UI
     public class SetNickNameUI : ChangeableUI
     {
         [SerializeField] private TMP_InputField nickNameField;
-        [Inject] PacketResponsePublisher _publisher;
+        [Inject] private PacketResponsePublisher _publisher = null;
         public override void Init(EventChannelSO channel)
         {
             base.Init(channel);
         }
         private void Start()
         {
+            Debug.Assert(_publisher != null, "PacketResponsePublisher injection failed.");
+            if (_publisher == null)
+                return;
+
             _publisher.AddListener(PacketID.C_SetName, HandleResponse);
-            
+        }
+
+        private void OnDestroy()
+        {
+            if (_publisher != null)
+                _publisher.RemoveListener(PacketID.C_SetName, HandleResponse);
         }
         private void HandleResponse(bool obj)
         {

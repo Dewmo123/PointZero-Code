@@ -56,7 +56,11 @@ namespace Scripts.UI.InGame
             _animator.Play("GameResultOpen");
             await UniTask.WaitForSeconds(3);
             _animator.Play("GameResultClose");
-            await UniTask.WaitUntil(() => _animator.GetCurrentAnimatorStateInfo(0).normalizedTime == 1);
+            await UniTask.WaitUntil(() =>
+            {
+                AnimatorStateInfo stateInfo = _animator.GetCurrentAnimatorStateInfo(0);
+                return stateInfo.IsName("GameResultClose") && stateInfo.normalizedTime >= 1f;
+            });
             gameObject.SetActive(false);
         }
     }

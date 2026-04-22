@@ -53,7 +53,10 @@ namespace Scripts.Entities.Players.MyPlayers
         private void HandleDead()
         {
             if (_shooting != null)
+            {
                 StopCoroutine(_shooting);
+                _shooting = null;
+            }
             line.gameObject.SetActive(false);
         }
 
@@ -72,19 +75,27 @@ namespace Scripts.Entities.Players.MyPlayers
         private void OnDestroy()
         {
             _player.OnAimEvent -= HandleAim;
+            _player.OnDead.RemoveListener(HandleDead);
+            _player.PlayerInput.OnReloadEvent -= HandleReloadEvent;
             _trigger.OnReloadEndTrigger -= HandleReloadEnd;
             if (_shooting != null)
+            {
                 StopCoroutine(_shooting);
+                _shooting = null;
+            }
         }
         public void HandleAttack(bool obj)
         {
             if (obj && _currentGun.currentBulletCount > 0 && !_player.IsReload)
             {
-                if (Time.time - _lastAttackTime >= attackDelay)
+                if (_shooting == null && Time.time - _lastAttackTime >= attackDelay)
                     _shooting = StartCoroutine(Shoot());
             }
             else if (!obj && _shooting != null)
+            {
                 StopCoroutine(_shooting);
+                _shooting = null;
+            }
         }
 
         private IEnumerator Shoot()
@@ -100,6 +111,8 @@ namespace Scripts.Entities.Players.MyPlayers
                 SendAttackReq();
                 yield return _currentGun.Wait;
             }
+
+            _shooting = null;
         }
 
         private void SendAttackReq()

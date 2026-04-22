@@ -32,9 +32,6 @@ class PacketHandler
         BombArea bombArea = _objectManager.CreateObject<BombArea>(bombInfo.index, (ObjectType)bombInfo.objectType);
         bombArea.InitArea(bombInfo.size.ToVector3(), bombInfo.position.ToVector3(), bombInfo.rotation.ToQuaternion(), bombInfo.index);
         _playerManager.MyPlayer.GetCompo<PlayerInteractManager>().isBombPlant = true;
-        var evt = PacketEvents.HandleTimerElapsed;
-        evt.remainTime = 0;
-        _packetChannel.InvokeEvent(evt);
     }
 
     internal void S_InitializeObjectsHandler(PacketSession session, IPacket packet)
@@ -258,7 +255,6 @@ class PacketHandler
     internal void S_BroadcastTimeHandler(PacketSession session, IPacket packet)
     {
         var broadcastTime = packet as S_BroadcastTime;
-        Debug.Log($"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}, {broadcastTime.time}");
-        OtherPlayerMovement.InterpolationBackTime = (long)((DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - broadcastTime.time));
+        OtherPlayerMovement.SyncServerTime(broadcastTime.time);
     }
 }

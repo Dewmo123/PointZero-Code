@@ -28,13 +28,11 @@ namespace DummyClient
 
         public override void OnRecvPacket(ArraySegment<byte> buffer)
         {
-            Debug.Log("Recv");
             _packetQueue.Push(buffer);
         }
 
         public override void OnSend(int numOfBytes)
         {
-            Console.WriteLine("SEND");
             //Console.WriteLine($"Transferred bytes: {numOfBytes}");
         }
     }

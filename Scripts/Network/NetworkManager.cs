@@ -1,4 +1,4 @@
-using Core.EventSystem;
+﻿using Core.EventSystem;
 using DummyClient;
 using Scripts.Network.Packets;
 using ServerCore;
@@ -27,7 +27,7 @@ namespace Scripts.Network
             _packetQueue = new PacketQueue(packetChannel);
             try
             {
-                IPAddress ip = Dns.GetHostEntry("akhge.duckdns.org").AddressList[0];
+                IPAddress ip = Dns.GetHostEntry("dewmo.kro.kr").AddressList[0];
                 IPEndPoint endPoint = new IPEndPoint(ip, 3303);
                 _connector.Connect(endPoint, () => _session = new ServerSession(_packetQueue), 1);
             }

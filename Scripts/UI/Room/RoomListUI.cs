@@ -17,18 +17,19 @@ namespace Scripts.UI.Room
         [SerializeField] private Transform contentsParent;
         private List<RoomAttributeUI> _attributes;
         private List<RoomInfoPacket> _roomInfos;
+        private int[] _visibleRoomIds;
 
-        private int _currentCount = 0;
-        private int _currentAttCount = 0;
+        private int _pageStartIndex = 0;
         private int _currentRoomId;
         private void Awake()
         {
             _attributes = new List<RoomAttributeUI>();
+            _visibleRoomIds = new int[countPerPage];
             for (int i = 0; i < countPerPage; i++)
             {
                 _attributes.Add(Instantiate(attribute, contentsParent).GetComponent<RoomAttributeUI>());
-                int k = i;
-                _attributes[i].GetComponent<Button>().onClick.AddListener(() => SetRoomId(_roomInfos[k].roomId));
+                int slot = i;
+                _attributes[i].GetComponent<Button>().onClick.AddListener(() => HandleAttributeClick(slot));
                 _attributes[i].gameObject.SetActive(false);
             }
             ResetAttributes();
@@ -64,44 +65,67 @@ namespace Scripts.UI.Room
             _currentRoomId = roomId;
             Debug.Log(roomId);
         }
+        private void HandleAttributeClick(int slot)
+        {
+            if (_roomInfos == null || slot < 0 || slot >= _visibleRoomIds.Length)
+                return;
+
+            int roomId = _visibleRoomIds[slot];
+            if (roomId == 0)
+                return;
+
+            SetRoomId(roomId);
+        }
         public void ResetAttributes()
-            => _attributes.ForEach(att => att.ClearUI());
+        {
+            _attributes.ForEach(att =>
+            {
+                att.ClearUI();
+                att.gameObject.SetActive(false);
+            });
+
+            for (int i = 0; i < _visibleRoomIds.Length; i++)
+                _visibleRoomIds[i] = 0;
+        }
         public void SetList(HandleRoomList roomInfos)
         {
-            _roomInfos = roomInfos.packet.roomInfos;
-            int cnt = Mathf.Clamp(_roomInfos.Count, 0, countPerPage);
-            for (int i = 0; i < cnt; i++)
+            _roomInfos = roomInfos.packet.roomInfos ?? new List<RoomInfoPacket>();
+            _pageStartIndex = 0;
+            RefreshPage();
+        }
+
+        private void RefreshPage()
+        {
+            ResetAttributes();
+            if (_roomInfos == null || _roomInfos.Count == 0)
+                return;
+
+            int visibleCount = Mathf.Min(countPerPage, _roomInfos.Count - _pageStartIndex);
+            for (int i = 0; i < visibleCount; i++)
+            {
+                RoomInfoPacket info = _roomInfos[_pageStartIndex + i];
+                _visibleRoomIds[i] = info.roomId;
                 _attributes[i].gameObject.SetActive(true);
-            _currentCount = 0;
-            SetNextAttributes();
+                _attributes[i].SetText(info.roomName, info.currentCount, info.maxCount);
+            }
         }
         public void SetNextAttributes()
         {
-            ResetAttributes();
-            int i;
-            for (i = _currentCount; i < _currentCount + countPerPage; i++)
-            {
-                if (i >= _roomInfos.Count)
-                    break;
-                _attributes[i - _currentCount]
-                    .SetText(_roomInfos[i].roomName, _roomInfos[i].currentCount, _roomInfos[i].maxCount);
-            }
-            if (i == _currentCount && _currentAttCount > 0)
-            {
-                _currentCount -= _currentAttCount;
-                SetNextAttributes();
+            if (_roomInfos == null || _roomInfos.Count == 0)
                 return;
-            }
-            _currentAttCount = i;
-            _currentCount += i;
+            if (_pageStartIndex + countPerPage >= _roomInfos.Count)
+                return;
+
+            _pageStartIndex += countPerPage;
+            RefreshPage();
         }
         public void SetPrevAttributes()
         {
-            ResetAttributes();
-            _currentCount -= (_currentAttCount + 5);
-            if (_currentCount < 0)
-                _currentCount = 0;
-            SetNextAttributes();
+            if (_roomInfos == null || _roomInfos.Count == 0)
+                return;
+
+            _pageStartIndex = Mathf.Max(0, _pageStartIndex - countPerPage);
+            RefreshPage();
         }
         public void EnterRoom()
         {

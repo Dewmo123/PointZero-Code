@@ -221,7 +221,7 @@ namespace Scripts.Entities.Players
             {
                 Transform enemy = enemiesInView[i].transform;
                 if (visibleTargets.Contains(enemy))
-                    return;
+                    continue;
                 Vector3 dir = enemy.position - transform.position;
                 Vector3 dirToEnemy = dir.normalized;
                 if (Vector3.Angle(transform.forward, dirToEnemy) < fovInfo.viewAngle * 0.5f)

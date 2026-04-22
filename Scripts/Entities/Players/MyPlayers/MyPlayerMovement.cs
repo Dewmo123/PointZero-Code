@@ -1,8 +1,8 @@
-﻿using Cysharp.Threading.Tasks;
-using Scripts.Core;
+﻿using Scripts.Core;
 using Scripts.Core.GameSystem;
 using Scripts.Network;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Scripts.Entities.Players.MyPlayers
 {
@@ -21,12 +21,16 @@ namespace Scripts.Entities.Players.MyPlayers
         [SerializeField] private int walkSpeed;
         [SerializeField] private int sprintSpeed;
         [SerializeField] private int aimSpeed;
+        [FormerlySerializedAs("sendInterval")]
+        [SerializeField] private float sendInterval = 0.02f;
 
         private int _currentSpeed;
         private MyPlayer _myPlayer;
         protected Vector3 _direction;
         protected Vector3 _velocity;
         private MyPlayerAttackCompo _attackCompo;
+        private float _sendTimer;
+
         public enum WalkMode
         {
             Idle,
@@ -34,6 +38,7 @@ namespace Scripts.Entities.Players.MyPlayers
             Sprint,
             Aim
         }
+
         public override void Initialize(NetworkEntity entity)
         {
             base.Initialize(entity);
@@ -45,13 +50,17 @@ namespace Scripts.Entities.Players.MyPlayers
             _attackCompo = entity.GetCompo<MyPlayerAttackCompo>();
             _controller = entity.GetComponent<CharacterController>();
             _myPlayer.OnDead.AddListener(StopImmediately);
+            _sendTimer = sendInterval;
         }
 
         private void OnDestroy()
         {
             _playerInput.OnSprintEvent -= HandleSprint;
+
             _myPlayer.OnAimEvent -= HandleAim;
+            _myPlayer.OnDead.RemoveListener(StopImmediately);
         }
+
         #region Movement
         protected void FixedUpdate()
         {
@@ -59,7 +68,10 @@ namespace Scripts.Entities.Players.MyPlayers
             CalculateRotation();
             ApplyGravity();
             Move();
+            if (!_player.isTest)
+                TrySendMyInfo();
         }
+
         private void ApplyGravity()
         {
             if (IsGround && _verticalVelocity < 0)
@@ -68,14 +80,17 @@ namespace Scripts.Entities.Players.MyPlayers
                 _verticalVelocity += gravity * Time.fixedDeltaTime;
             _velocity.y = _verticalVelocity;
         }
+
         private void Move()
         {
             _controller.Move(_velocity);
         }
+
         protected void CalculateMovement()
         {
             _velocity = _direction * _currentSpeed * Time.fixedDeltaTime;
         }
+
         protected void CalculateRotation()
         {
             Quaternion rotation;
@@ -84,8 +99,8 @@ namespace Scripts.Entities.Players.MyPlayers
                 Vector3 dir = (_playerInput.GetWorldPosition() - transform.position).normalized;
                 dir.y = 0;
                 rotation = Quaternion.LookRotation(dir);
-                float forwardDot = Vector3.Dot(model.forward, _direction); // 앞/뒤
-                float rightDot = Vector3.Dot(model.right, _direction);     // 좌/우
+                float forwardDot = Vector3.Dot(model.forward, _direction);
+                float rightDot = Vector3.Dot(model.right, _direction);
                 _animator.SetParam(_xHash, rightDot);
                 _animator.SetParam(_zHash, forwardDot);
             }
@@ -98,16 +113,23 @@ namespace Scripts.Entities.Players.MyPlayers
             model.rotation = Quaternion.Lerp(model.rotation, rotation, Time.fixedDeltaTime * rotateSpeed);
         }
         #endregion
-        private void Update()
+
+        private void TrySendMyInfo()
         {
-            if (!_player.isTest)
-                SendMyInfo();
-        }
-        private async void SendMyInfo()
-        {
-            await UniTask.WaitForSeconds(0.3f);
             if (_player.isDead)
                 return;
+
+            _sendTimer += Time.fixedDeltaTime;
+            float interval = sendInterval;
+            if (_sendTimer < interval)
+                return;
+
+            _sendTimer = 0f;
+            SendMyInfo();
+        }
+
+        private void SendMyInfo()
+        {
             C_UpdateLocation info = new C_UpdateLocation()
             {
                 location = new LocationInfoPacket()
@@ -134,27 +156,29 @@ namespace Scripts.Entities.Players.MyPlayers
              WalkMode.Sprint => sprintSpeed,
              _ => 0
          };
+
         public override void SetPosition(Vector3 position)
         {
             _controller.enabled = false;
             _player.transform.position = position;
             _controller.enabled = true;
         }
+
         public void SetMovement(Vector2 dir)
         {
-            // 카메라 기준 방향 설정 (y축 기준 회전만 반영)
             Vector3 camForward = Camera.main.transform.forward;
             Vector3 camRight = Camera.main.transform.right;
 
-            // y축 방향 제거 (평면 이동만 고려)
             camForward.y = 0f;
             camRight.y = 0f;
             camForward.Normalize();
             camRight.Normalize();
             _direction = camRight * dir.x + camForward * dir.y;
         }
+
         public void StopImmediately()
             => _direction = Vector3.zero;
+
         private void HandleSprint(bool obj)
             => IsSprint = obj;
         #endregion

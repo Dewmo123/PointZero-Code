@@ -16,8 +16,8 @@ namespace Scripts.Entities.Players
         protected EntityAnimator _animator;
         public bool IsAiming { get; protected set; }
 
-        protected int _xHash;
-        protected int _zHash;
+        protected int _xHash = Animator.StringToHash("X");
+        protected int _zHash = Animator.StringToHash("Z");
 
 
         public Vector3 ModelRot => model.transform.rotation.eulerAngles;
